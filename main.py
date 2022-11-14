@@ -15,7 +15,6 @@ def otp_string(name, issuer, digits, period):
 	return f"otpauth://totp/{issuer}:{name}?secret={base64.b32encode(bytes(secret, 'ascii')).decode()}&issuer={issuer}&algorithm=SHA1&digits={digits}&period={period}"
 
 def usage():
-	print("::usage()")
 	print("Usage: python3 main.py [ --generate-qr | --get-otp ]")
 
 def process_args(argv):
@@ -34,11 +33,8 @@ def process_args(argv):
 	return arg
 
 def generate_file_name(name):
-	print("generate_file_name")
 	at_loc = name.find("@")
 	
-	print(f"at_loc: {at_loc}")
-
 	filename_string = name.replace(" ", "_")
 
 	return f"{filename_string[:at_loc]}_qrcode.png" if at_loc > -1 else f"{filename_string}_qrcode.png"
@@ -67,14 +63,11 @@ def main():
 	dotenv_values('.env')
 
 	if command == generate_qr():
-		print("generating a QR Image")
 
 		name = input("What is your email address?")
 		totp_uri = otp_string(name, otp_issuer, otp_digits, otp_period)
-		print(totp_uri)
 
 		file_name = generate_file_name(name)
-		print(f"file_name: {file_name}")
 
 		qrcode_image = qrcode.make(totp_uri)
 		qrcode_image.save(file_name)
@@ -82,7 +75,6 @@ def main():
 		print(f"QR Code generated in file [{file_name}]")
 
 	elif command == get_otp():
-		print("getting a one time token")
 		encoded_secret = base64.b32encode(bytes(secret, 'ascii'))
 		one_time_code = pyotp.TOTP(encoded_secret, interval=otp_period)
 		for val in itertools.count(1):
