@@ -3,20 +3,13 @@ import qrcode
 import pyotp
 import itertools
 import time
-import pyglet
 import sys
 from dotenv import dotenv_values
-
-# from pyglet.window import Window
-
-# class AuthenticatorWindow(Window):
-
 
 secret = str()
 otp_issuer = str()
 otp_digits = int()
 otp_period = int()
-config = dict()
 
 def otp_string(name, issuer, digits, period):
 	return f"otpauth://totp/{issuer}:{name}?secret={base64.b32encode(bytes(secret, 'ascii')).decode()}&issuer={issuer}&algorithm=SHA1&digits={digits}&period={period}"
@@ -46,7 +39,9 @@ def generate_file_name(name):
 	
 	print(f"at_loc: {at_loc}")
 
-	return f"{name[:at_loc]}_qrcode.png"
+	filename_string = name.replace(" ", "_")
+
+	return f"{filename_string[:at_loc]}_qrcode.png" if at_loc > -1 else f"{filename_string}_qrcode.png"
 
 def generate_qr():
 	return "--generate-qr"
@@ -55,31 +50,22 @@ def get_otp():
 	return "--get-otp"
 
 def assign_env_values():
-	global config
-	global secret
-	global otp_issuer
-	global otp_digits
-	global otp_period
+	global secret, otp_issuer, otp_digits, otp_period
 
 	config = dotenv_values()
 
 	secret = config["SECRET"]
 	otp_issuer = config["COMPANY_NAME"]
-	otp_digits = config["DIGITS"]
-	otp_period = config["PERIOD"]
+	otp_digits = int(config["DIGITS"])
+	otp_period = int(config["PERIOD"])
 
-	# print(f"[otp_issuer: {otp_issuer}] [otp_digits: {otp_digits} characters] [otp_period: {otp_period} seconds]")
 
 def main():
 	command = process_args(sys.argv)
 
-	print("past the guard clauses")
-
 	assign_env_values()
-	config = dotenv_values('.env')
-	print(f"config: {config}")
+	dotenv_values('.env')
 
-	print(f"after config: [otp_issuer: {otp_issuer}] [otp_digits: {otp_digits} characters] [otp_period: {otp_period} seconds]")
 	if command == generate_qr():
 		print("generating a QR Image")
 
@@ -98,10 +84,10 @@ def main():
 	elif command == get_otp():
 		print("getting a one time token")
 		encoded_secret = base64.b32encode(bytes(secret, 'ascii'))
-		one_time_code = pyotp.TOTP(encoded_secret, interval=30)
+		one_time_code = pyotp.TOTP(encoded_secret, interval=otp_period)
 		for val in itertools.count(1):
 				print(f"{val:2}: {one_time_code.now()}")
-				time.sleep(30)
+				time.sleep(otp_period)
 
 if __name__ == "__main__":
 	main()
