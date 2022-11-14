@@ -5,18 +5,20 @@ import itertools
 import time
 import pyglet
 import sys
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
 # from pyglet.window import Window
 
 # class AuthenticatorWindow(Window):
 
 
-secret = "ThisIsAVeryLongPassword1!"
-company_name = "Paul Ko"
-email_addr = "paul@paul.paul"
+secret = str()
+otp_issuer = str()
+otp_digits = int()
+otp_period = int()
+config = dict()
 
-def otp_string(name, issuer = company_name, digits = 6, period = 30):
+def otp_string(name, issuer, digits, period):
 	return f"otpauth://totp/{issuer}:{name}?secret={base64.b32encode(bytes(secret, 'ascii')).decode()}&issuer={issuer}&algorithm=SHA1&digits={digits}&period={period}"
 
 def usage():
@@ -38,6 +40,13 @@ def process_args(argv):
 	
 	return arg
 
+def generate_file_name(name):
+	print("generate_file_name")
+	at_loc = name.find("@")
+	
+	print(f"at_loc: {at_loc}")
+
+	return f"{name[:at_loc]}_qrcode.png"
 
 def generate_qr():
 	return "--generate-qr"
@@ -45,68 +54,54 @@ def generate_qr():
 def get_otp():
 	return "--get-otp"
 
+def assign_env_values():
+	global config
+	global secret
+	global otp_issuer
+	global otp_digits
+	global otp_period
+
+	config = dotenv_values()
+
+	secret = config["SECRET"]
+	otp_issuer = config["COMPANY_NAME"]
+	otp_digits = config["DIGITS"]
+	otp_period = config["PERIOD"]
+
+	# print(f"[otp_issuer: {otp_issuer}] [otp_digits: {otp_digits} characters] [otp_period: {otp_period} seconds]")
+
 def main():
 	command = process_args(sys.argv)
 
 	print("past the guard clauses")
 
+	assign_env_values()
+	config = dotenv_values('.env')
+	print(f"config: {config}")
+
+	print(f"after config: [otp_issuer: {otp_issuer}] [otp_digits: {otp_digits} characters] [otp_period: {otp_period} seconds]")
 	if command == generate_qr():
 		print("generating a QR Image")
 
 		name = input("What is your email address?")
-		print(otp_string(name))
+		totp_uri = otp_string(name, otp_issuer, otp_digits, otp_period)
+		print(totp_uri)
+
+		file_name = generate_file_name(name)
+		print(f"file_name: {file_name}")
+
+		qrcode_image = qrcode.make(totp_uri)
+		qrcode_image.save(file_name)
+
+		print(f"QR Code generated in file [{file_name}]")
+
 	elif command == get_otp():
 		print("getting a one time token")
-	
-
-	# window = pyglet.window.Window()
-
-	# label = pyglet.text.Label('Hello, world!',
-	# 													font_name = 'Times New Roman',
-	# 													font_size = 36,
-	# 													x = window.width // 2, y = window.height // 2,
-	# 													anchor_x = 'center', anchor_y = 'center')
-	# button_image = pyglet.image.load('button.png')
-
-	# provisioning_button = pyglet.gui.PushButton(x = window.width // 2, y = window.height // 2, pressed = button_image, depressed = button_image)
-
-	# @window.event
-	# def on_draw():
-	# 	window.clear()
-	# 	button_image.blit((window.width - button_image.width) // 2, (window.height - button_image.height) // 2)
-		
-		
-	
-	# pyglet.app.run()
-	
-
-	# encoded_secret = base64.b32encode(bytes(secret, 'ascii'))
-	# print(f"encoded_secret: {encoded_secret}")
-
-	# google_auth_uri = pyotp.totp.TOTP(encoded_secret, digits=8, interval=5).provisioning_uri(name=email_addr, issuer_name=company_name )
-	
-	# print(f"google_auth_uri: {google_auth_uri}")
-	# totp = pyotp.TOTP(encoded_secret, interval=1)
-
-	# for val in itertools.count(0):
-	# 	print(f"{val:2}: {totp.now()}")
-	# 	time.sleep(1)
-
-	# 	if val == 30:
-	# 		break
-	
-	# print("Hello World!")
-	# issuer = "Paul%20Ko"
-	# name = "paul@paul.paul"
-	# digits = 6
-	# period = 30
-	# totp_string = otp_string(issuer, name, digits, period)
-	# print(totp_string)
-
-	# qrcode_image = qrcode.make(totp_string)
-	# print(f"qrcode_image type: {type(qrcode_image)}")
-
-	# qrcode_image.save("qrcode.png")
+		encoded_secret = base64.b32encode(bytes(secret, 'ascii'))
+		one_time_code = pyotp.TOTP(encoded_secret, interval=30)
+		for val in itertools.count(1):
+				print(f"{val:2}: {one_time_code.now()}")
+				time.sleep(30)
 
 if __name__ == "__main__":
 	main()
